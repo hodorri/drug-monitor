@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>약품 재고 알림</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --border: #e8e4dc;
+    --text: #1a1a1a;
+    --text-muted: #888;
+    --accent: #2d6a4f;
+    --accent-light: #e8f5ee;
+    --accent-hover: #1b4332;
+    --danger: #c0392b;
+    --danger-light: #fdecea;
+    --tag-bg: #f0ede6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* Header */
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 28px 24px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: '💊';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 48px;
+    opacity: 0.18;
+  }
+  header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  header p {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-top: 4px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: var(--accent-hover);
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    background: #52d98a;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Main */
+  main { padding: 20px 16px; max-width: 600px; margin: 0 auto; }
+
+  /* Input card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+  input[type="text"] {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    background: white;
+  }
+  input[type="text"]::placeholder { color: #bbb; }
+
+  button.add-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  button.add-btn:active { transform: scale(0.97); }
+  button.add-btn:hover { background: var(--accent-hover); }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  /* Drug list */
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .count-badge {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .drug-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .drug-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .drug-name {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .drug-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .delete-btn {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .delete-btn:hover {
+    background: var(--danger-light);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 0;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* Save button */
+  .save-wrap {
+    margin-top: 16px;
+  }
+  button.save-btn {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  button.save-btn:hover { background: var(--accent-hover); }
+  button.save-btn:active { transform: scale(0.99); }
+  button.save-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .save-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a1a;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Token modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
+  .modal input {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-cancel { background: var(--bg); color: var(--text); }
+  .btn-confirm { background: var(--accent); color: white; }
+
+  .info-box {
+    background: var(--accent-light);
+    border: 1px solid #b7dfc8;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--accent-hover);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  .info-box a { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💊 약품 재고 알림</h1>
+  <p>입고되면 바로 이메일로 알려드려요</p>
+</header>
+
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <span id="statusText">모니터링 대기 중</span>
+</div>
+
+<main>
+
+  <!-- 약품 추가 -->
+  <div class="card">
+    <div class="card-title">약품 추가</div>
+    <div class="input-row">
+      <input type="text" id="drugInput" placeholder="약품명 입력 (예: 인데놀정)" maxlength="50">
+      <button class="add-btn" id="addBtn">추가</button>
+    </div>
+    <p class="hint">💡 정확한 약품명 일부만 입력해도 됩니다 (예: "인데놀" 입력 시 인데놀정 10mg, 40mg 모두 감지)</p>
+  </div>
+
+  <!-- 약품 목록 -->
+  <div class="card">
+    <div class="list-header">
+      <div class="card-title" style="margin-bottom:0">모니터링 목록</div>
+      <span class="count-badge" id="countBadge">0개</span>
+    </div>
+    <div class="drug-list" id="drugList"></div>
+  </div>
+
+  <!-- 저장 -->
+  <div class="save-wrap">
+    <button class="save-btn" onclick="saveToGithub()">
+      <span>✅</span> GitHub에 저장하기
+    </button>
+    <p class="save-hint">저장하면 5분 이내에 모니터링이 시작됩니다</p>
+  </div>
+
+</main>
+
+<!-- Token 입력 모달 -->
+<div class="modal-overlay" id="tokenModal">
+  <div class="modal">
+    <h2>🔑 GitHub 토큰 입력</h2>
+    <div class="info-box">
+      처음 한 번만 입력하면 이 기기에 저장돼요.<br>
+      GitHub → Settings → Developer settings →<br>
+      Personal access tokens → <strong>repo 권한</strong>으로 발급
+    </div>
+    <p>GitHub Personal Access Token을 입력하세요</p>
+    <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxx">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-confirm" onclick="confirmToken()">저장하고 계속</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ========== 설정 (본인 저장소로 변경) ==========
+  const GITHUB_OWNER = 'hodorri';   // 본인 GitHub 아이디
+  const GITHUB_REPO  = 'drug-monitor';            // 저장소 이름
+  const FILE_PATH    = 'drugs.json';
+  // ===============================================
+
+  let drugs = [];
+
+  async function init() {
+    // localStorage 대신 메모리 + fetch로 GitHub에서 직접 읽어오기
+    await loadFromGithub();
+    renderList();
+  }
+
+  async function loadFromGithub() {
+    try {
+      const url = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${FILE_PATH}?t=${Date.now()}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        drugs = data.drugs || [];
+        document.getElementById('statusText').textContent =
+          `마지막 업데이트: ${data.updated_at ? new Date(data.updated_at).toLocaleString('ko-KR') : '-'}`;
+      }
+    } catch(e) {
+      drugs = [];
+    }
+  }
+
+  function renderList() {
+    const list = document.getElementById('drugList');
+    const badge = document.getElementById('countBadge');
+    badge.textContent = `${drugs.length}개`;
+
+    if (drugs.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <p>모니터링할 약품을 추가해주세요</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = drugs.map((d, i) => `
+      <div class="drug-item" id="item-${i}">
+        <div>
+          <div class="drug-name">${d.name}</div>
+          <div class="drug-meta">추가일: ${d.added_at ? new Date(d.added_at).toLocaleDateString('ko-KR') : '-'}</div>
+        </div>
+        <button class="delete-btn" onclick="removeDrug(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addDrug() {
+    const input = document.getElementById('drugInput');
+    const name = input.value.trim();
+    if (!name) return;
+    if (drugs.find(d => d.name === name)) {
+      showToast('이미 추가된 약품이에요');
+      return;
+    }
+    drugs.push({ name, added_at: new Date().toISOString() });
+    input.value = '';
+    renderList();
+    showToast(`"${name}" 추가됨`);
+  }
+
+  function removeDrug(i) {
+    const name = drugs[i].name;
+    drugs.splice(i, 1);
+    renderList();
+    showToast(`"${name}" 삭제됨`);
+  }
+
+  // Enter키로 추가
+  document.getElementById('addBtn').addEventListener('click', () => addDrug());
+  document.getElementById('drugInput').addEventListener('keyup', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addDrug(); }
+  });
+
+  // GitHub 저장
+  let pendingSave = false;
+
+  function saveToGithub() {
+    const token = getToken();
+    if (!token) {
+      pendingSave = true;
+      document.getElementById('tokenModal').classList.add('show');
+      return;
+    }
+    doSave(token);
+  }
+
+  async function doSave(token) {
+    const btn = document.querySelector('.save-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> 저장 중...';
+
+    try {
+      // 현재 파일 SHA 가져오기 (업데이트에 필요)
+      let sha = null;
+      const getResp = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`,
+        { headers: { Authorization: `token ${token}` } }
+      );
+      if (getResp.ok) {
+        const data = await getResp.json();
+        sha = data.sha;
+      }
+
+      const content = {
+        drugs: drugs,
+        updated_at: new Date().toISOString()
+      };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))));
+
+      const body = {
+        message: `약품 목록 업데이트 (${drugs.length}개)`,
+        content: encoded,
+        ...(sha ? { sha } : {})
+      };
+
+      const putResp = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FILE_PATH}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        }
+      );
+
+      if (putResp.ok) {
+        showToast('✅ 저장 완료! 5분 내 모니터링 시작');
+      } else {
+        const err = await putResp.json();
+        throw new Error(err.message);
+      }
+    } catch(e) {
+      showToast('❌ 저장 실패: ' + e.message);
+      console.error(e);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<span>✅</span> GitHub에 저장하기';
+  }
+
+  // Token 관리 (sessionStorage - 메모리처럼 탭 닫으면 사라짐)
+  function getToken() { return sessionStorage.getItem('gh_token'); }
+  function setToken(t) { sessionStorage.setItem('gh_token', t); }
+
+  function closeModal() {
+    document.getElementById('tokenModal').classList.remove('show');
+    pendingSave = false;
+  }
+  function confirmToken() {
+    const t = document.getElementById('tokenInput').value.trim();
+    if (!t) return;
+    setToken(t);
+    document.getElementById('tokenModal').classList.remove('show');
+    if (pendingSave) { pendingSave = false; doSave(t); }
+  }
+
+  // Toast
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  init();
+</script>
+</body>
+</html>
