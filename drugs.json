@@ -1,4 +1,9 @@
 {
-  "drugs": [],
-  "updated_at": null
+  "drugs": [
+    {
+      "name": "인데놀",
+      "added_at": "2026-03-10T14:17:13.660Z"
+    }
+  ],
+  "updated_at": "2026-03-10T14:17:27.023Z"
 }
